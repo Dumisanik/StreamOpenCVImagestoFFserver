@@ -189,9 +189,55 @@ int main(int argc, char* argv[]){
 
 
 
-
     ////////////////////////////////
     /// create new video stream
+    int i, err;
+    AVFormatContext *ic = avformat_alloc_context();
+
+    ic->interrupt_callback = int_cb;
+    err = avformat_open_input(&ic, out_filename, NULL, NULL);
+    if (err < 0)
+        return err;
+    /* copy stream format */
+    for(i=0;i<ic->nb_streams;i++) {
+        AVStream *st;
+        AVCodec *codec;
+        const char *enc_config;
+
+        codec = avcodec_find_encoder(ic->streams[i]->codec->codec_id);
+        if (!codec) {
+            av_log(s, AV_LOG_ERROR, "no encoder found for codec id %i\n", ic->streams[i]->codec->codec_id);
+            return AVERROR(EINVAL);
+        }
+
+        /*
+        if (codec->type == AVMEDIA_TYPE_VIDEO)
+            opt_video_codec(o, "c:v", codec->name);
+        */
+        st   = avformat_new_stream(oc, codec); //new_output_stream(o, s, codec->type, -1);
+
+        avcodec_get_context_defaults3(st->codec, codec);
+        enc_config = av_stream_get_recommended_encoder_configuration(ic->streams[i]);
+        if (enc_config) {
+            AVDictionary *opts = NULL;
+            av_dict_parse_string(&opts, enc_config, "=", ",", 0);
+            av_opt_set_dict2(st->codec, &opts, AV_OPT_SEARCH_CHILDREN);
+            av_dict_free(&opts);
+        }
+
+        if (st->codec->codec_type == AVMEDIA_TYPE_AUDIO && !ost->stream_copy)
+            choose_sample_fmt(st, codec);
+        else if (st->codec->codec_type == AVMEDIA_TYPE_VIDEO && !ost->stream_copy)
+            choose_pixel_fmt(st, st->codec, codec, st->codec->pix_fmt);
+        avcodec_copy_context(ost->enc_ctx, st->codec);
+        if (enc_config)
+            av_dict_parse_string(&ost->encoder_opts, enc_config, "=", ",", 0);
+    }
+
+    avformat_close_input(&ic);
+    return err;
+
+
     /* find the encoder */
     AVCodec* outputCodec = avcodec_find_encoder(oc->oformat->video_codec);
     if (!outputCodec) {
@@ -209,6 +255,7 @@ int main(int argc, char* argv[]){
     }
     avcodec_get_context_defaults3(output_stream->codec, outputCodec);
 
+    //============================================================
     videoindex = 0;
 
     //Create output AVStream according to input AVStream
