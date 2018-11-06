@@ -1,4 +1,4 @@
-PROJECT(cvToFFMPEG)
+PROJECT(simpleStreamer)
 
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6.3)
 
@@ -49,7 +49,10 @@ IF(NOT FFmpeg_FOUND)
 ENDIF(NOT FFmpeg_FOUND)
 # ===================
 
-
+SET(CUDA_TOOLKIT_ROOT_DIR "/usr/local/cuda")
+FIND_PACKAGE(CUDA 8.0 REQUIRED)
+LINK_DIRECTORIES(/usr/local/cuda/lib64)
+INCLUDE_DIRECTORIES(${INCLUDE_DIRECTORIES}/C/common/inc)
 
 
 
@@ -70,28 +73,31 @@ IF(USE_OPENCV)
         ADD_DEFINITIONS(-DUSE_OPENCV)
         MESSAGE("OpenCV include dir: ${OpenCV_INCLUDE_DIRS}")
         MESSAGE("OpenCV libraries: ${OpenCV_LIBRARIES}")
+
+        SET(THIRD_PARTY_LIBRARIES ${THIRD_PARTY_LIBRARIES}
+            opencv_core
+            opencv_imgproc
+            opencv_highgui
+            opencv_imgcodecs
+            opencv_videoio
+        )
     ENDIF(OpenCV_FOUND)
 
 ENDIF(USE_OPENCV)
 
-
 SET(SOURCES
   main.cpp
-  streaming.h
 )
+
+
 
 
 SET(THIRD_PARTY_LIBRARIES ${THIRD_PARTY_LIBRARIES}
-    opencv_core
-    opencv_imgproc
-    opencv_highgui
-    opencv_imgcodecs
-    opencv_videoio
+    pthread
 )
 
 
-
-ADD_EXECUTABLE(cvToFFMPEG ${SOURCES})
+ADD_EXECUTABLE(simpleStreamer ${SOURCES})
 
 ADD_DEFINITIONS(-D_UNIX_)
 ADD_DEFINITIONS(-D_LINUX_)
@@ -99,6 +105,6 @@ ADD_DEFINITIONS(-D_LINUX_)
 SET(PUREGEV_ROOT "/opt/pleora/ebus_sdk/Ubuntu-x86_64/")
 
 #LINK_DIRECTORIES(/usr/local/cuda/lib64;/usr/local/cuda-7.5/targets/x86_64-linux/lib/)
-TARGET_LINK_LIBRARIES(cvToFFMPEG -lstdc++ cuda ${THIRD_PARTY_LIBRARIES}) #opencv_core opencv_imgproc opencv_highgui lboost
+TARGET_LINK_LIBRARIES(simpleStreamer -lstdc++ ${THIRD_PARTY_LIBRARIES}) #opencv_core opencv_imgproc opencv_highgui lboost
 
 
